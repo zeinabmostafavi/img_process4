@@ -42,7 +42,10 @@ class mainwindow(QWidget):
                 break
 
     def filter_emoji(self):
-        sticker1 = cv2.imread('7777825.png')
+        sticker1 = cv2.imread('7777825.png', cv2.IMREAD_UNCHANGED)
+        sticker_img = sticker1[:, :, 0:3]
+        sticker_img_gray = cv2.cvtColor(sticker_img, cv2.COLOR_BGR2GRAY)
+        sticker_mask = sticker1[:, :, 3]
         while True:
             valdation, frame = my_video.read()
             if valdation is not True:
@@ -51,9 +54,25 @@ class mainwindow(QWidget):
             faces = face_detector.detectMultiScale(frame_gray, 1.3)
             for i, face in enumerate(faces):
                 x, y, w, h = face
-                resized_sticker = cv2.resize(sticker1, (w, h))
-                frame[y:y+h, x:x+w] = resized_sticker
-                cv2.imshow('output', frame)
+
+                img_face = frame_gray[y:y+h, x:x+w]
+                sticker_img_gray_resized = cv2.resize(sticker_img_gray, (w, h))
+                sticker_mask_gray_resized = cv2.resize(sticker_mask, (w, h))
+
+                sticker_img_gray_resized = sticker_img_gray_resized.astype(
+                    float)/255
+                sticker_mask_gray_resized = sticker_mask_gray_resized.astype(
+                    float)/255
+                img_face = img_face.astype(float)/255
+                forground = cv2.multiply(
+                    sticker_img_gray_resized, sticker_mask_gray_resized)
+                background = cv2.multiply(
+                    img_face, 1-sticker_mask_gray_resized)
+                result = cv2.add(background, forground)
+                result *= 255
+
+                frame_gray[y:y+h, x:x+w] = result
+                cv2.imshow('output', frame_gray)
             if cv2.waitKey(1) & 0xFF == ord('q'):
                 break
 
